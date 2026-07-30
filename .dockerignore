@@ -1,0 +1,14 @@
+.git
+.gitignore
+.github
+.planning
+.claude
+.codex
+target
+dist
+*.md
+!README.md
+platform-integration
+Dockerfile
+.dockerignore
+go.sum

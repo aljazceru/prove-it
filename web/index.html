@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="referrer" content="no-referrer" />
+  <meta name="color-scheme" content="dark" />
+  <title>Prove-It · Confidential Attestation Playground</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/app.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="app">
+      <div class="logo" aria-hidden="true">🔏</div>
+      <div>
+        <h1>Prove-It</h1>
+        <div class="sub">Confidential attestation playground · <span id="instance-label">…</span></div>
+      </div>
+      <div class="spacer"></div>
+      <div id="header-badges" class="pillrow"></div>
+    </header>
+
+    <div id="status" class="banner">
+      <div class="ico" id="status-ico">○</div>
+      <div>
+        <h2 id="status-title">Checking this workload…</h2>
+        <p id="status-detail">Probing the runtime and attestation surface.</p>
+      </div>
+    </div>
+
+    <section class="block">
+      <h2>Runtime facts</h2>
+      <div id="facts" class="grid"><div class="card muted">loading…</div></div>
+    </section>
+
+    <section class="block">
+      <h2>Live attestation</h2>
+      <div class="card">
+        <p class="muted" style="margin:0 0 4px">
+          Run a live attestation against the AMD&nbsp;SEV-SNP hardware in this confidential VM.
+          Your browser generates a fresh nonce, the TEE embeds it into the hardware
+          <span class="mono">REPORT_DATA</span> field, and the browser independently re-derives
+          the binding to confirm the report is real, fresh, and bound to this session.
+        </p>
+        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+          <button id="verify-btn" class="btn">Run live verification</button>
+          <button id="selftest-btn" class="btn ghost">Run browser self-test</button>
+          <span id="verify-note" class="dim"></span>
+        </div>
+        <ol id="verify-steps" class="steps" style="display:none"></ol>
+        <div id="compare" class="compare" style="display:none"></div>
+      </div>
+    </section>
+
+    <div id="secret-wrap"></div>
+
+    <details class="raw" id="evidence">
+      <summary>Raw attestation response (JSON)</summary>
+      <pre id="evidence-pre">—</pre>
+    </details>
+
+    <footer class="app">
+      Prove-It is a demonstration workload. Attestation freshness and session
+      binding are verified cryptographically in your browser; the hardware
+      signature chain (AMD VCEK / KDS) is surfaced in the raw response for
+      independent verification. Run the <em>browser self-test</em> to confirm the
+      on-page crypto matches the server's golden vectors.
+    </footer>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
