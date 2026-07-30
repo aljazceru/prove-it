@@ -24,10 +24,10 @@ echo "livez: $(curl -sf "http://127.0.0.1:${host_port}/livez")"
 html="$(curl -sf "http://127.0.0.1:${host_port}/")"
 grep -q 'Prove-It' <<<"$html"
 grep -q '/app.js' <<<"$html"
-grep -q '/verify.js' <<<"$html"
 
-# Static assets must resolve.
+# Static assets must resolve (app.css, app.js, verify.js).
 curl -sf "http://127.0.0.1:${host_port}/app.css" >/dev/null
+curl -sf "http://127.0.0.1:${host_port}/app.js" >/dev/null
 curl -sf "http://127.0.0.1:${host_port}/verify.js" >/dev/null
 
 # /api/info must report prove-it facts (attestation-proxy will be unreachable
