@@ -129,7 +129,7 @@ jobs:
           printf '%s\n' "${image_ref}" > dist/prove-it-image.txt
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
 
       - name: Sign pushed digest
         env:
