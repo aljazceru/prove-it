@@ -20,7 +20,7 @@ import (
 func main() {
 	addr := flag.String("addr", envOr("PROVE_IT_ADDR", ":8080"), "HTTP listen address")
 	configDir := flag.String("config-dir",
-		envOr("ENCLAVA_CONFIG_DIR", "/state/app-data/.enclava/config"),
+		envOr("ENCLAVA_CONFIG_DIR", "/state/.enclava/config"),
 		"Enclava confidential config handoff directory")
 	statePath := flag.String("state-path",
 		envOr("ENCLAVA_STATE_PATH", "/state/app-data"),

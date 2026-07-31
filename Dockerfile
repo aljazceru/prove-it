@@ -6,7 +6,7 @@
 # debian:bookworm-slim runtime. Follows the Enclava platform conventions used
 # by templates/debian-ssh-ngrok-template: non-root UID/GID 10001, encrypted
 # state under /state/app-data, config handoff under
-# /state/app-data/.enclava/config, readiness on :8080/livez.
+# /state/.enclava/config, readiness on :8080/livez.
 
 # Builder stage. Production should pin this digest from the toolchain release
 # used by CI; left tag-pinned here so the example stays buildable standalone.
@@ -27,13 +27,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --gid 10001 user \
     && useradd --uid 10001 --gid 10001 --home-dir /home/user --shell /usr/sbin/nologin user \
-    && mkdir -p /state/app-data/.enclava/config /home/user \
+    && mkdir -p /state/.enclava/config /state/app-data /home/user \
     && chown -R 10001:10001 /state /home/user
 
 COPY --from=build /out/prove-it /usr/local/bin/prove-it
 
 ENV PROVE_IT_ADDR=:8080 \
-    ENCLAVA_CONFIG_DIR=/state/app-data/.enclava/config \
+    ENCLAVA_CONFIG_DIR=/state/.enclava/config \
     ENCLAVA_STATE_PATH=/state/app-data
 
 USER 10001:10001
