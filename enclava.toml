@@ -1,5 +1,5 @@
 [app]
-name = "prove-it"
+name = "prove-it-dev"
 port = 8080
 command = ["/usr/local/bin/prove-it"]
 
@@ -9,7 +9,7 @@ size = "1Gi"
 tls_size = "2Gi"
 
 [unlock]
-mode = "auto"
+mode = "password"
 
 [resources]
 cpu = "1"
