@@ -13,6 +13,9 @@
 ## Shell & Command Reliability
 
 ## Domain Behavior Guardrails
+1. **[2026-07-31] CAP managed config lives at `/state/.enclava/config`**
+   Do instead: keep `ENCLAVA_CONFIG_DIR` on that platform path; `/state/app-data` is application persistence, not the config handoff root.
+2. **[2026-07-31] Hosted PaaS cannot complete the auto-unlock mode transition yet**
+   Do instead: create this dev app in password mode and retain its mode-600 storage password and recovery mnemonic until the hosted transition route is implemented.
 
 ## User Directives
-
