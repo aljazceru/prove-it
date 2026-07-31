@@ -1,0 +1,21 @@
+[app]
+name = "prove-it"
+port = 8080
+command = ["/usr/local/bin/prove-it"]
+
+[storage]
+paths = ["/state/app-data"]
+size = "1Gi"
+tls_size = "2Gi"
+
+[unlock]
+mode = "auto"
+
+[resources]
+cpu = "1"
+memory = "512Mi"
+
+[health]
+path = "/livez"
+interval = 30
+timeout = 10
