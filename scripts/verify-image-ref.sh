@@ -55,7 +55,6 @@ if [[ "$run_cosign" -eq 1 ]]; then
   echo "verifying keyless signature for ${raw}"
   "$COSIGN_BIN" verify "$raw" \
     --certificate-identity "$SIGNER_SUBJECT" \
-    --certificate-identity-regex "^${SIGNER_SUBJECT//./[.]}$" \
     --certificate-oidc-issuer "$SIGNER_ISSUER"
 fi
 
