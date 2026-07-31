@@ -11,9 +11,9 @@ PaaS console (alongside `debian-ssh-frp` and `mini-enclava-go`), drop the
 The repo's [`../.github/workflows/image.yml`](../.github/workflows/image.yml)
 builds, pushes, and keyless-signs the image on every push to `main`:
 
-- Repository: `ghcr.io/enclava-labs/prove-it`
+- Repository: `ghcr.io/aljazceru/prove-it`
 - Signer subject (cosign keyless, GitHub OIDC):
-  `https://github.com/enclava-labs/prove-it/.github/workflows/image.yml@refs/heads/main`
+  `https://github.com/aljazceru/prove-it/.github/workflows/image.yml@refs/heads/main`
 - Signer issuer: `https://token.actions.githubusercontent.com`
 - Artifact: `dist/prove-it-image.txt` (the digest-pinned ref)
 
@@ -21,7 +21,7 @@ Promote the published digest before configuring PaaS:
 
 ```sh
 scripts/verify-image-ref.sh --cosign dist/prove-it-image.txt
-# => PROVE_IT_IMAGE=ghcr.io/enclava-labs/prove-it@sha256:<64-hex>
+# => PROVE_IT_IMAGE=ghcr.io/aljazceru/prove-it@sha256:<64-hex>
 ```
 
 ## 2. Register as a hosted template
@@ -32,10 +32,10 @@ Add these constants near the other template constants in
 ```rust
 const PROVE_IT_SLUG: &str = "prove-it";
 const PROVE_IT_VERSION: &str = "0.1.0";
-const DEFAULT_PROVE_IT_IMAGE: &str = "ghcr.io/enclava-labs/prove-it:main";
-const DEFAULT_PROVE_IT_REPOSITORY: &str = "enclava-labs/prove-it";
+const DEFAULT_PROVE_IT_IMAGE: &str = "ghcr.io/aljazceru/prove-it:main";
+const DEFAULT_PROVE_IT_REPOSITORY: &str = "aljazceru/prove-it";
 const DEFAULT_PROVE_IT_SIGNER_SUBJECT: &str =
-    "https://github.com/enclava-labs/prove-it/.github/workflows/image.yml@refs/heads/main";
+    "https://github.com/aljazceru/prove-it/.github/workflows/image.yml@refs/heads/main";
 const PROVE_IT_TLS_POLICY: &str = "confidential_per_instance_tls";
 ```
 
@@ -174,6 +174,6 @@ revealed. That contrast is the demo.
 
 ```sh
 enclava create prove-demo --signer-subject \
-  "https://github.com/enclava-labs/prove-it/.github/workflows/image.yml@refs/heads/main"
-enclava deploy --image ghcr.io/enclava-labs/prove-it@sha256:<digest>
+  "https://github.com/aljazceru/prove-it/.github/workflows/image.yml@refs/heads/main"
+enclava deploy --image ghcr.io/aljazceru/prove-it@sha256:<digest>
 ```

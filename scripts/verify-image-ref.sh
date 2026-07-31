@@ -21,7 +21,7 @@ Options:
             Actions workflow identity. Requires network access and cosign.
 
 On success, prints the exact config line:
-  PROVE_IT_IMAGE=ghcr.io/enclava-labs/prove-it@sha256:<64-hex>
+  PROVE_IT_IMAGE=ghcr.io/aljazceru/prove-it@sha256:<64-hex>
 USAGE
 }
 
@@ -39,7 +39,7 @@ fi
 
 # Accept a file (artifact), a CONFIG=line, or a bare ref.
 if [[ -f "$input" ]]; then
-  raw="$(grep -E "^ghcr[.]io/enclava-labs/prove-it@sha256:[0-9a-f]{64}$" "$input" | head -n1 || true)"
+  raw="$(grep -E "${IMAGE_REF_PATTERN}" "$input" | head -n1 || true)"
 elif [[ "$input" == PROVE_IT_IMAGE=* ]]; then
   raw="${input#PROVE_IT_IMAGE=}"
 else
