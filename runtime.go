@@ -36,7 +36,7 @@ type runtimeFacts struct {
 	Version           string    `json:"version"`
 }
 
-const proveItVersion = "0.2.0"
+const proveItVersion = "0.2.1"
 
 func gatherRuntimeFacts(configDir, statePath string) runtimeFacts {
 	facts := runtimeFacts{

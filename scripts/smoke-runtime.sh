@@ -22,10 +22,17 @@ echo "livez: $(curl -sf "http://127.0.0.1:${host_port}/livez")"
 
 # Dashboard must be served and reference the app bundle.
 html="$(curl -sf "http://127.0.0.1:${host_port}/")"
+js="$(curl -sf "http://127.0.0.1:${host_port}/app.js")"
 grep -q 'Prove-It' <<<"$html"
 grep -q '/app.js' <<<"$html"
 grep -q 'Binding proof ≠ hardware appraisal' <<<"$html"
 grep -q 'The user workload is treated as hostile' <<<"$html"
+grep -q 'AMD ARK' <<<"$html"
+
+# Every literal el("id") lookup must have a matching element in the page.
+while IFS= read -r id; do
+  grep -q "id=\"${id}\"" <<<"$html" || { echo "missing DOM element: #${id}" >&2; exit 1; }
+done < <(grep -oE 'el\("[^"]+"\)' <<<"$js" | cut -d'"' -f2 | sort -u)
 
 headers="$(curl -sfD - -o /dev/null "http://127.0.0.1:${host_port}/")"
 grep -qi '^Content-Security-Policy:' <<<"$headers"
@@ -33,7 +40,7 @@ grep -qi '^X-Content-Type-Options: nosniff' <<<"$headers"
 
 # Static assets must resolve (app.css, app.js, verify.js).
 curl -sf "http://127.0.0.1:${host_port}/app.css" >/dev/null
-curl -sf "http://127.0.0.1:${host_port}/app.js" >/dev/null
+test -n "$js"
 curl -sf "http://127.0.0.1:${host_port}/verify.js" >/dev/null
 
 # /api/info must report prove-it facts (attestation-proxy will be unreachable
