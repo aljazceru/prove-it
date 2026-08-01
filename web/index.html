@@ -14,7 +14,7 @@
     <header class="app">
       <a class="brand" href="/" aria-label="Prove-It home">
         <span class="logo" aria-hidden="true">P</span>
-        <span><strong>Prove-It</strong><small>Enclava verification example</small></span>
+        <span><strong>Prove-It</strong><small>Enclava verification example · <span id="instance-label">loading…</span></small></span>
       </a>
       <div id="header-badges" class="pillrow" aria-label="Runtime status"></div>
     </header>
@@ -57,7 +57,25 @@
       </section>
 
       <section class="block proof-scope" aria-labelledby="scope-title">
-        <div class="section-heading"><div><p class="eyebrow">Read the verdict correctly</p><h2 id="scope-title">Binding proof ≠ hardware appraisal</h2></div></div>
+        <div class="section-heading"><div><p class="eyebrow">The complete trust path</p><h2 id="scope-title">Where the root of trust enters</h2></div><p>A verifier starts from an AMD certificate it already trusts, then follows signatures down to this specific report before checking the request binding.</p></div>
+        <div class="trust-flow" aria-label="AMD SEV-SNP trust chain and request binding flow">
+          <div class="trust-node root"><span>Trusted anchor</span><strong>AMD ARK</strong><p>The verifier pins AMD’s public root certificate. Trust starts here—not at this website.</p></div>
+          <div class="trust-arrow" aria-hidden="true"><small>signs</small>→</div>
+          <div class="trust-node"><span>Intermediate</span><strong>AMD ASK</strong><p>The ARK signature authenticates AMD’s SEV signing certificate.</p></div>
+          <div class="trust-arrow" aria-hidden="true"><small>signs</small>→</div>
+          <div class="trust-node"><span>Chip endorsement</span><strong>VCEK</strong><p>A chip- and TCB-specific certificate chains back to AMD.</p></div>
+          <div class="trust-arrow" aria-hidden="true"><small>verifies</small>→</div>
+          <div class="trust-node signed"><span>Hardware evidence</span><strong>SNP report</strong><p>The VCEK verifies the report signature; policy checks its TCB and measurement.</p></div>
+          <div class="trust-arrow" aria-hidden="true"><small>contains</small>→</div>
+          <div class="trust-node binding"><span>Fresh binding</span><strong>REPORT_DATA</strong><p>Commits to this domain, browser nonce and in-TEE keys.</p></div>
+          <div class="trust-arrow" aria-hidden="true"><small>allows</small>→</div>
+          <div class="trust-node policy"><span>Decision</span><strong>App policy</strong><p>Authorize only when appraisal and request binding both pass.</p></div>
+        </div>
+        <div class="trust-legend">
+          <span><i class="appraiser-key" aria-hidden="true"></i><strong>Independent appraiser:</strong> ARK → ASK → VCEK → report signature, TCB and measurement</span>
+          <span><i class="browser-key" aria-hidden="true"></i><strong>This browser demo:</strong> nonce + domain + keys → REPORT_DATA equality</span>
+        </div>
+        <div class="section-heading scope-heading"><div><p class="eyebrow">Read the verdict correctly</p><h2>Binding proof ≠ hardware appraisal</h2></div></div>
         <div class="scope-grid">
           <article class="scope-card verified-scope">
             <span class="scope-icon" aria-hidden="true">✓</span>

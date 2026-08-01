@@ -144,7 +144,7 @@ async function loadInfo() {
     }
     renderSecret({ demo_secret_present: info.runtime.demo_secret_present, demo_secret_sha256: info.runtime.demo_secret_sha256, demo_secret_revealed: false });
   } catch (e) {
-    setStatus("err", "Could not reach prove-it", String(e));
+    setStatus("err", "Could not initialize prove-it", String(e));
   }
 }
 
@@ -316,7 +316,7 @@ async function runSelfTest() {
 // ----- demo fixture (?demo=1) ------------------------------------------------
 async function loadDemoFixture() {
   const rt = {
-    version: "0.2.0",
+    version: "0.2.1",
     instance_label: "demo-fixture",
     config_ready: true,
     config_keys: ["INSTANCE_LABEL", "DEMO_SECRET"],
