@@ -41,6 +41,17 @@ function setStatus(state, title, detail) {
   el("status-detail").textContent = detail;
 }
 
+function resetProofChain() {
+  document.querySelectorAll("[data-proof-step]").forEach((node) => {
+    node.classList.remove("passed", "failed");
+  });
+}
+
+function markProofStep(number, state = "passed") {
+  const node = document.querySelector(`[data-proof-step="${number}"]`);
+  if (node) node.classList.add(state);
+}
+
 // ----- badges ----------------------------------------------------------------
 function renderBadges(info) {
   const rt = info.runtime || {};
@@ -108,7 +119,7 @@ function renderFacts(info) {
          ["sha256", fmtHash(rt.demo_secret_sha256)],
          ["hostname", esc(rt.hostname)],
        ])}</dl>
-       <div class="dim" style="margin-top:8px">Secrets arrive through the confidential config handoff; their plaintext exists only in hardware-encrypted memory.</div>
+       <div class="dim fact-note">Secrets arrive through the confidential config handoff; their plaintext exists only in hardware-encrypted memory.</div>
      </div>`,
   ].join("");
 }
@@ -128,8 +139,8 @@ async function loadInfo() {
       setStatus("warn", "Attestation surface partially available",
         `Proxy reachable but the TEE TLS SPKI could not be resolved: ${info.leaf_spki_error}`);
     } else {
-      setStatus("warn", "Attestation surface ready — verify now",
-        "The attestation-proxy is live. Click “Run live verification” to prove, in your browser, that this is an attested confidential VM.");
+      setStatus("warn", "Binding surface ready — verify now",
+        "The attestation-proxy is live. Run verification to check freshness and REPORT_DATA binding; hardware trust still requires independent signature and TCB appraisal.");
     }
     renderSecret({ demo_secret_present: info.runtime.demo_secret_present, demo_secret_sha256: info.runtime.demo_secret_sha256, demo_secret_revealed: false });
   } catch (e) {
@@ -173,7 +184,7 @@ function renderSecret(data) {
     wrap.innerHTML = `<div class="secret">
       <span class="lock">🔓</span>
       <div><strong>Secret revealed</strong>
-        <div class="dim">Delivered to the TEE at startup via the confidential config handoff. Shown only after the browser confirmed a live, bound attestation.</div>
+        <div class="dim">Delivered to the TEE at startup via the confidential config handoff. Shown only after the browser confirmed the fresh REPORT_DATA binding.</div>
       </div>
       <code class="revealed">${esc(data.demo_secret)}</code>
     </div>`;
@@ -194,9 +205,10 @@ async function runVerify() {
   btn.disabled = true;
   el("verify-note").textContent = "";
   const steps = el("verify-steps");
-  steps.style.display = "flex";
+  steps.hidden = false;
   steps.innerHTML = "";
-  el("compare").style.display = "none";
+  el("compare").hidden = true;
+  resetProofChain();
 
   const nonce = randomNonceBytes(32);
   const nonceB64 = bytesToBase64(nonce);
@@ -204,8 +216,9 @@ async function runVerify() {
 
   const s1 = addStep("Generate a fresh 32-byte nonce in the browser");
   s1.ok(`nonce=${short(bytesToHex(nonce), 16)} (${nonce.length} bytes via crypto.getRandomValues) — never sent anywhere except this request`);
+  markProofStep(1);
 
-  const s2 = addStep("Request a live SEV-SNP attestation bound to this nonce");
+  const s2 = addStep("Request fresh evidence bound to this nonce");
   try {
     const r = await fetch("/api/verify", {
       method: "POST",
@@ -217,17 +230,21 @@ async function runVerify() {
 
     if (!r.ok || data.error) {
       s2.err(`${data.error || ("http " + r.status)}: ${data.detail || ""}`.trim());
+      markProofStep(2, "failed");
       setStatus("err", "Verification failed", data.error ? `attestation-proxy: ${data.detail || data.error}` : `unexpected response (HTTP ${r.status})`);
       btn.disabled = false;
       return;
     }
     s2.ok(`${data.attestation_type || "attestation"} · ${data.runtime_class || ""} · proxy ${data.proxy_timestamp || ""}`);
+    markProofStep(2);
 
-    const s3 = addStep("Extract REPORT_DATA from the hardware attestation report");
+    const s3 = addStep("Extract REPORT_DATA from the returned evidence");
     if (data.evidence_report_data_hex) {
       s3.ok(`source=${data.evidence_report_data_source} → ${short(data.evidence_report_data_hex, 20)}`);
+      markProofStep(3);
     } else {
-      s3.err(`REPORT_DATA not located in evidence JSON (${data.evidence_report_data_source || "none"}) — cannot complete hardware binding`);
+      s3.err(`REPORT_DATA not located in evidence JSON (${data.evidence_report_data_source || "none"}) — cannot complete binding`);
+      markProofStep(3, "failed");
     }
 
     const s4 = addStep("Independently re-derive the binding in the browser");
@@ -241,30 +258,34 @@ async function runVerify() {
       return;
     }
     const browserEqServer = browserRd === data.expected_report_data_hex;
-    s4.ok(browserEqServer
+    const browserDetail = browserEqServer
       ? `browser=${short(browserRd, 20)}  matches server expected`
-      : `browser=${short(browserRd, 20)}  server=${short(data.expected_report_data_hex, 20)}  (mismatch!)`);
+      : `browser=${short(browserRd, 20)}  server=${short(data.expected_report_data_hex, 20)}  (mismatch!)`;
+    (browserEqServer ? s4.ok : s4.err)(browserDetail);
+    markProofStep(4, browserEqServer ? "passed" : "failed");
 
-    const s5 = addStep("Confirm three-way match: browser == server == hardware");
+    const s5 = addStep("Confirm three-way match: browser == server == evidence");
     const hwEq = !!data.evidence_report_data_hex && browserRd === data.evidence_report_data_hex;
     const allMatch = browserEqServer && hwEq;
-    s5.ok(allMatch
-      ? "✓ browser == server-expected == hardware REPORT_DATA"
-      : (hwEq ? "browser==hardware but server differs" : "hardware REPORT_DATA differs from recompute — binding NOT proven"));
+    const matchDetail = allMatch
+      ? "✓ browser == server-expected == evidence REPORT_DATA"
+      : (hwEq ? "browser==evidence but server differs" : "evidence REPORT_DATA differs from recompute — binding NOT proven");
+    (allMatch ? s5.ok : s5.err)(matchDetail);
+    markProofStep(5, allMatch ? "passed" : "failed");
 
-    el("compare").style.display = "grid";
+    el("compare").hidden = false;
     el("compare").innerHTML =
       compareRow("browser", browserRd, allMatch) +
       compareRow("server expected", data.expected_report_data_hex, browserEqServer) +
-      compareRow("hardware REPORT_DATA", data.evidence_report_data_hex, hwEq);
+      compareRow("evidence REPORT_DATA", data.evidence_report_data_hex, hwEq);
 
     renderSecret(data);
     if (allMatch) {
-      setStatus("attested", "Attested — fresh and bound to this session",
-        `Your nonce was embedded into the SEV-SNP REPORT_DATA by the hardware and re-derived identically in your browser. The attestation is live, unreplayed, and bound to ${domain}.`);
+      setStatus("attested", "Fresh binding verified",
+        `The evidence REPORT_DATA matches this browser's nonce, ${domain}, and the in-TEE proxy key. This is not yet an AMD signature or TCB appraisal.`);
     } else {
       setStatus("failed", "Binding not verified",
-        "The recomputed binding did not match the hardware REPORT_DATA. Do not trust this instance.");
+        "The recomputed binding did not match the evidence REPORT_DATA. Do not trust this response.");
     }
   } catch (e) {
     s2.err(String(e));
@@ -295,7 +316,7 @@ async function runSelfTest() {
 // ----- demo fixture (?demo=1) ------------------------------------------------
 async function loadDemoFixture() {
   const rt = {
-    version: "0.1.0",
+    version: "0.2.0",
     instance_label: "demo-fixture",
     config_ready: true,
     config_keys: ["INSTANCE_LABEL", "DEMO_SECRET"],
@@ -318,21 +339,21 @@ async function loadDemoFixture() {
   renderFacts(lastInfo);
   renderSecret({ demo_secret_present: true, demo_secret_sha256: rt.demo_secret_sha256, demo_secret_revealed: false });
   setStatus("simulated", "DEMO FIXTURE — simulated values, not a live attestation",
-    "The prove-it API is unavailable, so this view is rendering canned data so you can see the UI. Deploy the image on Enclava for a real, cryptographically verified state.");
+    "The prove-it API is unavailable, so this view uses canned values. Deploy on Enclava for fresh binding evidence and use an independent appraiser for hardware trust.");
 
   // Render a self-consistent (but simulated) verification using the golden vector.
   const steps = el("verify-steps");
-  steps.style.display = "flex";
+  steps.hidden = false;
   steps.innerHTML = "";
   const mk = (t, d, ok) => `<li><div class="mark ${ok ? "ok" : "err"}">${ok ? "✓" : "✗"}</div><div class="body"><div class="t">${esc(t)}</div><div class="d">${esc(d)}</div></div></li>`;
   steps.innerHTML =
     mk("Generate nonce (fixture)", "nonce=fixed golden vector (simulated)", true) +
     mk("Request attestation (fixture)", "no hardware present — fixture response", false);
-  el("compare").style.display = "grid";
+  el("compare").hidden = false;
   el("compare").innerHTML =
     compareRow("browser", GOLDEN.reportData, true) +
     compareRow("server expected", GOLDEN.reportData, true) +
-    compareRow("hardware REPORT_DATA", GOLDEN.reportData + " (simulated)", true);
+    compareRow("evidence REPORT_DATA", GOLDEN.reportData + " (simulated)", true);
 }
 
 // ----- wire up ---------------------------------------------------------------

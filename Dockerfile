@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
 #
 # prove-it — confidential attestation playground.
 #
@@ -8,9 +8,9 @@
 # state under /state/app-data, config handoff under
 # /state/.enclava/config, readiness on :8080/livez.
 
-# Builder stage. Production should pin this digest from the toolchain release
-# used by CI; left tag-pinned here so the example stays buildable standalone.
-FROM golang:1.22-bookworm AS build
+# Builder and runtime are digest-pinned so the signed output has reproducible
+# base inputs rather than mutable tags.
+FROM golang:1.22-bookworm@sha256:3d699e4d15d0f8f13c9195c0632a16702b8cbdece2955af1c23b37ae5d55a253 AS build
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download

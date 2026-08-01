@@ -31,8 +31,8 @@ Add these constants near the other template constants in
 
 ```rust
 const PROVE_IT_SLUG: &str = "prove-it";
-const PROVE_IT_VERSION: &str = "0.1.0";
-const DEFAULT_PROVE_IT_IMAGE: &str = "ghcr.io/aljazceru/prove-it:main";
+const PROVE_IT_VERSION: &str = "0.2.0";
+const DEFAULT_PROVE_IT_IMAGE: &str = "ghcr.io/aljazceru/prove-it@sha256:bb590f549eaafc5069d528406c6a7d879f4f143b5e837dc2e701031f615ddc9d";
 const DEFAULT_PROVE_IT_REPOSITORY: &str = "aljazceru/prove-it";
 const DEFAULT_PROVE_IT_SIGNER_SUBJECT: &str =
     "https://github.com/aljazceru/prove-it/.github/workflows/image.yml@refs/heads/main";
@@ -52,8 +52,8 @@ fn prove_it_template(config: &AppConfig) -> HostedTemplate {
     HostedTemplate {
         slug: PROVE_IT_SLUG,
         name: "Prove-It",
-        description: "Self-describing attestation playground: prove, in your browser, \
-                      that this workload is a live, attested AMD SEV-SNP confidential VM.",
+        description: "Explainable attestation example: inspect and verify a fresh \
+                      browser-to-evidence binding, then appraise the hardware evidence.",
         features: vec![
             "Live SEV-SNP attestation",
             "Browser-side nonce-freshness proof",
@@ -79,15 +79,10 @@ fn prove_it_template(config: &AppConfig) -> HostedTemplate {
             DEFAULT_GITHUB_SIGNER_ISSUER,
         ),
         container_name: "web",
-        command: vec![
-            "/bin/sh",
-            "-c",
-            "ENCLAVA_CONFIG_DIR=/state/app-data/.enclava/config \
-             exec /usr/local/bin/prove-it",
-        ],
+        command: vec!["/usr/local/bin/prove-it"],
         port: 8080,
         storage_paths: vec!["/state/app-data"],
-        unlock_mode: "auto",
+        unlock_mode: "password",
         health_path: "/livez",
         health_interval: 30,
         health_timeout: 10,
@@ -100,9 +95,9 @@ fn prove_it_template(config: &AppConfig) -> HostedTemplate {
         security_notes: vec![
             "Runs behind per-instance confidential TLS terminated inside the TEE.",
             "The demo secret is delivered to the confidential runtime and revealed \
-             only after a browser-verified, nonce-bound attestation.",
-            "Zero external egress: the workload talks only to its co-located \
-             attestation-proxy.",
+             only after a browser-verified nonce binding.",
+            "The app requires no user-defined external egress; platform boot, KBS, \
+             and certificate traffic remains policy-scoped.",
         ],
         // prove-it needs no outbound network. Egress stays default-deny.
         egress_allowlist: vec![],
@@ -157,23 +152,33 @@ template env.
 
 ## 3. Deploy and verify
 
-```sh
-enclava template list                                      # prove-it appears
-enclava template deploy prove-it --name prove-demo \
-    --config INSTANCE_LABEL=seattle-canary \
-    --secret  DEMO_SECRET=$(openssl rand -hex 32)
-enclava status --app prove-demo
-```
+Use the PaaS console so the template config form delivers `INSTANCE_LABEL` and
+`DEMO_SECRET` through the confidential handoff. The current CLI template command
+does not expose generic `--config`/`--secret` flags; do not document flags that
+silently bypass or fail that delivery path.
 
 Open the returned app domain in a browser and click **Run live verification**.
-On a plain node you see the unverified banner; on an SEV-SNP node the banner
-flips to **Attested — fresh and bound to this session** and the demo secret is
-revealed. That contrast is the demo.
+On a plain node you see the unverified banner; on an SEV-SNP node the page shows
+**Fresh binding verified** and reveals the demo secret. The page still labels
+AMD signature/TCB appraisal as a separate production requirement.
 
 ## 4. Direct CAP deploy (without the hosted template)
 
 ```sh
-enclava create prove-demo --signer-subject \
+umask 077
+openssl rand -hex 32 > demo-secret.txt
+openssl rand -hex 32 > storage-password.txt
+
+# enclava.toml supplies the app name and password unlock mode.
+enclava create --image ghcr.io/aljazceru/prove-it@sha256:<digest> \
+  --signer-subject \
   "https://github.com/aljazceru/prove-it/.github/workflows/image.yml@refs/heads/main"
-enclava deploy --image ghcr.io/aljazceru/prove-it@sha256:<digest>
+enclava deploy --image ghcr.io/aljazceru/prove-it@sha256:<digest> \
+  --set INSTANCE_LABEL=developer-example \
+  --set-file DEMO_SECRET=demo-secret.txt \
+  --storage-password-file storage-password.txt
+enclava status
 ```
+
+Keep both files mode `0600`, back up the recovery material, and never put secret
+values in command arguments, Git, image layers, browser storage, or CI logs.

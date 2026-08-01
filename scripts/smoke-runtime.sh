@@ -24,6 +24,12 @@ echo "livez: $(curl -sf "http://127.0.0.1:${host_port}/livez")"
 html="$(curl -sf "http://127.0.0.1:${host_port}/")"
 grep -q 'Prove-It' <<<"$html"
 grep -q '/app.js' <<<"$html"
+grep -q 'Binding proof ≠ hardware appraisal' <<<"$html"
+grep -q 'The user workload is treated as hostile' <<<"$html"
+
+headers="$(curl -sfD - -o /dev/null "http://127.0.0.1:${host_port}/")"
+grep -qi '^Content-Security-Policy:' <<<"$headers"
+grep -qi '^X-Content-Type-Options: nosniff' <<<"$headers"
 
 # Static assets must resolve (app.css, app.js, verify.js).
 curl -sf "http://127.0.0.1:${host_port}/app.css" >/dev/null

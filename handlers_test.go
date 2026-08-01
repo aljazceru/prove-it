@@ -99,7 +99,6 @@ func newTestApp(t *testing.T, proxyURL string) *app {
 	if err := os.WriteFile(filepath.Join(dir, "DEMO_SECRET"), []byte("hunter2"), 0o640); err != nil {
 		t.Fatal(err)
 	}
-	globalConfigDir = dir
 	a, err := newApp(dir, dir)
 	if err != nil {
 		t.Fatal(err)
@@ -120,6 +119,7 @@ func TestVerify_MatchRevealsSecret(t *testing.T) {
 	a := newTestApp(t, proxy.URL)
 	body, _ := json.Marshal(verifyRequest{NonceB64: testNonceB64(t), Domain: testDomain})
 	req := httptest.NewRequest(http.MethodPost, "/api/verify", bytes.NewReader(body))
+	req.Host = testDomain
 	rec := httptest.NewRecorder()
 	a.ServeHTTP(rec, req)
 
@@ -155,6 +155,7 @@ func TestVerify_MismatchHidesSecret(t *testing.T) {
 	a := newTestApp(t, proxy.URL)
 	body, _ := json.Marshal(verifyRequest{NonceB64: testNonceB64(t), Domain: testDomain})
 	req := httptest.NewRequest(http.MethodPost, "/api/verify", bytes.NewReader(body))
+	req.Host = testDomain
 	rec := httptest.NewRecorder()
 	a.ServeHTTP(rec, req)
 
@@ -181,6 +182,38 @@ func TestVerify_MissingParams(t *testing.T) {
 	a.ServeHTTP(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400", rec.Code)
+	}
+}
+
+func TestVerify_RejectsPayloadDomainMismatch(t *testing.T) {
+	proxy := fakeProxy(t, testReport)
+	defer proxy.Close()
+
+	a := newTestApp(t, proxy.URL)
+	body, _ := json.Marshal(verifyRequest{NonceB64: testNonceB64(t), Domain: "attacker.example"})
+	req := httptest.NewRequest(http.MethodPost, "/api/verify", bytes.NewReader(body))
+	req.Host = testDomain
+	rec := httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest || !bytes.Contains(rec.Body.Bytes(), []byte(`"domain_mismatch"`)) {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestVerify_RejectsUnknownPayloadFields(t *testing.T) {
+	proxy := fakeProxy(t, testReport)
+	defer proxy.Close()
+
+	a := newTestApp(t, proxy.URL)
+	body := []byte(`{"nonce_b64":"` + testNonceB64(t) + `","domain":"` + testDomain + `","command":"whoami"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/verify", bytes.NewReader(body))
+	req.Host = testDomain
+	rec := httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest || !bytes.Contains(rec.Body.Bytes(), []byte(`"bad_request"`)) {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -224,6 +257,9 @@ func TestInfoEndpoint(t *testing.T) {
 	if resp.AttestationInfo == nil || resp.AttestationInfo["attestation_type"] != "coco-sev-snp" {
 		t.Fatalf("attestation info not proxied")
 	}
+	if got := rec.Header().Get("Content-Security-Policy"); got == "" {
+		t.Fatal("Content-Security-Policy header is missing")
+	}
 }
 
 // TestVerify_FullHTTPServer stands both the app and the fake attestation-proxy
@@ -247,7 +283,13 @@ func TestVerify_FullHTTPServer(t *testing.T) {
 		Domain:   testDomain,
 	})
 
-	resp, err := appSrv.Client().Post(appSrv.URL+"/api/verify", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, appSrv.URL+"/api/verify", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	req.Host = testDomain
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := appSrv.Client().Do(req)
 	if err != nil {
 		t.Fatalf("http post: %v", err)
 	}

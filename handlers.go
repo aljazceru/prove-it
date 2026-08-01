@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -117,6 +118,14 @@ func (a *app) handleAPIVerify(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, verifyResponse{Error: "missing_parameter", Detail: "nonce_b64 and domain are required"})
 		return
 	}
+	requestDomain := requestHostname(r.Host)
+	if requestDomain == "" || req.Domain != requestDomain {
+		writeJSON(w, http.StatusBadRequest, verifyResponse{
+			Error:  "domain_mismatch",
+			Detail: "domain must match the HTTPS request hostname",
+		})
+		return
+	}
 	nonce, err := decodeNonce(req.NonceB64)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, verifyResponse{Error: "nonce_invalid", Detail: err.Error(), NonceB64: req.NonceB64})
@@ -139,8 +148,16 @@ func (a *app) handleAPIVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := buildVerifyResponse(req, nonce, leafHex, source, ar)
+	resp := buildVerifyResponse(a.configDir, req, nonce, leafHex, source, ar)
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func requestHostname(hostport string) string {
+	hostport = strings.TrimSpace(strings.ToLower(hostport))
+	if host, _, err := net.SplitHostPort(hostport); err == nil {
+		return strings.Trim(host, "[]")
+	}
+	return strings.Trim(hostport, "[]")
 }
 
 // resolveLeafSPKI returns (hex, source, err) where source is "env" or "tls-dial".
@@ -155,10 +172,9 @@ func (a *app) resolveLeafSPKI(ctx context.Context) (string, string, error) {
 	return h, "tls-dial", nil
 }
 
-// buildVerifyResponse is pure: it turns an attestation-proxy response into the
-// verify payload, computing the expected REPORT_DATA independently of the proxy
-// so a mismatch is visible to the client.
-func buildVerifyResponse(req verifyRequest, nonce [32]byte, leafHex, leafSource string, ar *attestationResponse) verifyResponse {
+// buildVerifyResponse turns an attestation-proxy response into the verify
+// payload, computing the expected REPORT_DATA independently of the proxy.
+func buildVerifyResponse(configDir string, req verifyRequest, nonce [32]byte, leafHex, leafSource string, ar *attestationResponse) verifyResponse {
 	resp := verifyResponse{
 		NonceB64:            req.NonceB64,
 		Domain:              req.Domain,
@@ -205,17 +221,13 @@ func buildVerifyResponse(req verifyRequest, nonce [32]byte, leafHex, leafSource 
 	// delivered to the TEE at startup; showing it here is a demo affordance for a
 	// viewer who has cryptographically confirmed a live, bound attestation.
 	if resp.Ok {
-		if secret, ok := readConfigValueOk(globalConfigDir, "DEMO_SECRET"); ok && secret != "" {
+		if secret, ok := readConfigValueOk(configDir, "DEMO_SECRET"); ok && secret != "" {
 			resp.DemoSecret = strings.TrimRight(secret, "\r\n")
 			resp.DemoSecretRevealed = true
 		}
 	}
 	return resp
 }
-
-// globalConfigDir lets the pure buildVerifyResponse read the demo secret without
-// threading the app through every call. Set in main().
-var globalConfigDir string
 
 func decodeNonce(b64 string) ([32]byte, error) {
 	var out [32]byte
