@@ -5,73 +5,153 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="referrer" content="no-referrer" />
   <meta name="color-scheme" content="dark" />
-  <title>Prove-It · Confidential Attestation Playground</title>
+  <title>Prove-It · Follow the chain of proof</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/app.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div class="wrap">
     <header class="app">
-      <div class="logo" aria-hidden="true">🔏</div>
-      <div>
-        <h1>Prove-It</h1>
-        <div class="sub">Confidential attestation playground · <span id="instance-label">…</span></div>
-      </div>
-      <div class="spacer"></div>
-      <div id="header-badges" class="pillrow"></div>
+      <a class="brand" href="/" aria-label="Prove-It home">
+        <span class="logo" aria-hidden="true">P</span>
+        <span><strong>Prove-It</strong><small>Enclava verification example</small></span>
+      </a>
+      <div id="header-badges" class="pillrow" aria-label="Runtime status"></div>
     </header>
 
-    <div id="status" class="banner">
-      <div class="ico" id="status-ico">○</div>
-      <div>
-        <h2 id="status-title">Checking this workload…</h2>
-        <p id="status-detail">Probing the runtime and attestation surface.</p>
-      </div>
-    </div>
-
-    <section class="block">
-      <h2>Runtime facts</h2>
-      <div id="facts" class="grid"><div class="card muted">loading…</div></div>
-    </section>
-
-    <section class="block">
-      <h2>Live attestation</h2>
-      <div class="card">
-        <p class="muted" style="margin:0 0 4px">
-          Run a live attestation against the AMD&nbsp;SEV-SNP hardware in this confidential VM.
-          Your browser generates a fresh nonce, the TEE embeds it into the hardware
-          <span class="mono">REPORT_DATA</span> field, and the browser independently re-derives
-          the binding to confirm the report is real, fresh, and bound to this session.
-        </p>
-        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center">
-          <button id="verify-btn" class="btn">Run live verification</button>
-          <button id="selftest-btn" class="btn ghost">Run browser self-test</button>
-          <span id="verify-note" class="dim"></span>
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Live evidence, explained</p>
+          <h1>Don’t trust a badge.<br /><span>Follow the proof.</span></h1>
+          <p class="lede">This workload shows every value used to bind fresh attestation evidence to your browser request—and clearly separates that binding check from full AMD hardware appraisal.</p>
+          <a class="text-link" href="#verify">Run the verification <span aria-hidden="true">↓</span></a>
         </div>
-        <ol id="verify-steps" class="steps" style="display:none"></ol>
-        <div id="compare" class="compare" style="display:none"></div>
+        <div class="hero-orbit" aria-hidden="true">
+          <div class="orbit-ring ring-a"></div>
+          <div class="orbit-ring ring-b"></div>
+          <div class="orbit-core"><span>CE-v1</span><strong>REPORT<br />DATA</strong></div>
+          <span class="orbit-label label-browser">browser nonce</span>
+          <span class="orbit-label label-domain">domain</span>
+          <span class="orbit-label label-key">TEE key</span>
+        </div>
+      </section>
+
+      <div id="status" class="banner" role="status" aria-live="polite">
+        <div class="ico" id="status-ico">○</div>
+        <div><h2 id="status-title">Checking this workload…</h2><p id="status-detail">Probing the runtime and attestation surface.</p></div>
       </div>
-    </section>
 
-    <div id="secret-wrap"></div>
+      <section class="block" aria-labelledby="chain-title">
+        <div class="section-heading">
+          <div><p class="eyebrow">The protocol</p><h2 id="chain-title">One request, five inspectable steps</h2></div>
+          <p>Green means this browser observed the step during the current verification. Nothing is hidden behind a single “secure” label.</p>
+        </div>
+        <ol class="proof-chain" aria-label="Attestation binding flow">
+          <li data-proof-step="1"><span class="step-no">01</span><strong>Challenge</strong><p>The browser creates 32 unpredictable bytes with WebCrypto.</p><code>nonce</code></li>
+          <li data-proof-step="2"><span class="step-no">02</span><strong>Bind</strong><p>The domain, nonce and in-TEE proxy key become a CE-v1 transcript.</p><code>SHA-256(transcript)</code></li>
+          <li data-proof-step="3"><span class="step-no">03</span><strong>Report</strong><p>The attestation path places the derived value in SEV-SNP REPORT_DATA.</p><code>evidence.report_data</code></li>
+          <li data-proof-step="4"><span class="step-no">04</span><strong>Recompute</strong><p>This page repeats the derivation independently with WebCrypto.</p><code>web/verify.js</code></li>
+          <li data-proof-step="5"><span class="step-no">05</span><strong>Compare</strong><p>Browser, server and evidence values must agree byte-for-byte.</p><code>A = B = C</code></li>
+        </ol>
+      </section>
 
-    <details class="raw" id="evidence">
-      <summary>Raw attestation response (JSON)</summary>
-      <pre id="evidence-pre">—</pre>
-    </details>
+      <section class="block proof-scope" aria-labelledby="scope-title">
+        <div class="section-heading"><div><p class="eyebrow">Read the verdict correctly</p><h2 id="scope-title">Binding proof ≠ hardware appraisal</h2></div></div>
+        <div class="scope-grid">
+          <article class="scope-card verified-scope">
+            <span class="scope-icon" aria-hidden="true">✓</span>
+            <div><h3>This browser verifies here</h3><ul><li>The challenge is fresh for this request</li><li>The domain and in-TEE proxy SPKI are in the transcript</li><li>The evidence REPORT_DATA matches the browser derivation</li><li>A mismatched or replayed binding fails closed</li></ul></div>
+          </article>
+          <article class="scope-card appraisal-scope">
+            <span class="scope-icon" aria-hidden="true">→</span>
+            <div><h3>A production appraiser must also verify</h3><ul><li>AMD VCEK certificate chain and report signature</li><li>Chip TCB level, revocation and endorsement freshness</li><li>Launch measurement and allowed image identity</li><li>Your organization’s authorization policy</li></ul></div>
+          </article>
+        </div>
+        <p class="scope-note"><strong>Honest verdict:</strong> this demo proves the freshness and consistency of the binding. Treat the hardware as trusted only after an independent appraiser accepts the signed evidence and policy.</p>
+      </section>
 
-    <footer class="app">
-      Prove-It is a demonstration workload. Attestation freshness and session
-      binding are verified cryptographically in your browser; the hardware
-      signature chain (AMD VCEK / KDS) is surfaced in the raw response for
-      independent verification. Run the <em>browser self-test</em> to confirm the
-      on-page crypto matches the server's golden vectors.
-    </footer>
+      <section class="block" aria-labelledby="boundary-title">
+        <div class="section-heading"><div><p class="eyebrow">Infrastructure isolation</p><h2 id="boundary-title">The user workload is treated as hostile</h2></div><p>Application code does not enforce this boundary. CAP, Kata/SEV-SNP, Kubernetes and Cilium do.</p></div>
+        <div class="boundary-map">
+          <div class="boundary-zone public-zone"><span class="zone-label">Public</span><strong>Browser</strong><p>Sends HTTPS and a fresh nonce. Receives public evidence only.</p></div>
+          <div class="boundary-arrow" aria-hidden="true"><span>HTTPS</span>→</div>
+          <div class="boundary-zone tee-zone">
+            <span class="zone-label">Confidential VM</span>
+            <div class="tee-grid">
+              <div class="payload-box"><strong>Untrusted app payload</strong><small>non-root · read-only rootfs<br />all capabilities dropped<br />no service-account token</small></div>
+              <div class="platform-box"><strong>Platform sidecars</strong><small>attestation · encrypted storage<br />tenant TLS · boot policy</small></div>
+            </div>
+          </div>
+          <div class="boundary-arrow restricted" aria-hidden="true"><span>policy-scoped</span>→</div>
+          <div class="boundary-zone infra-zone"><span class="zone-label">Enclava infrastructure</span><strong>Default deny</strong><p>Only explicit DNS, KBS, certificate and control-plane paths are reachable.</p></div>
+        </div>
+        <p class="scope-note">A signed app image cannot grant itself host access, Kubernetes credentials or broader egress. Those controls belong to the platform and must remain enforced even when the payload is malicious.</p>
+      </section>
+
+      <section class="block" aria-labelledby="facts-title">
+        <div class="section-heading"><div><p class="eyebrow">Live inventory</p><h2 id="facts-title">What this instance reports</h2></div></div>
+        <div id="facts" class="grid"><div class="card muted">Loading runtime facts…</div></div>
+      </section>
+
+      <section class="block verify-block" id="verify" aria-labelledby="verify-title">
+        <div class="section-heading"><div><p class="eyebrow">Try it</p><h2 id="verify-title">Run the binding check</h2></div><p>Watch the protocol above turn green as each observed value is validated.</p></div>
+        <div class="card verify-card">
+          <p class="intro-copy">A new nonce is generated every time. The response stays visible below so you can inspect the exact evidence and claims used by the demo.</p>
+          <div class="action-row">
+            <button id="verify-btn" class="btn">Run live verification</button>
+            <button id="selftest-btn" class="btn ghost">Test browser crypto</button>
+            <span id="verify-note" class="dim"></span>
+          </div>
+          <ol id="verify-steps" class="steps" hidden></ol>
+          <div id="compare" class="compare" hidden></div>
+        </div>
+      </section>
+
+      <div id="secret-wrap"></div>
+
+      <section class="block developer" aria-labelledby="developer-title">
+        <div class="section-heading"><div><p class="eyebrow">Developer blueprint</p><h2 id="developer-title">Expose verification without inventing a trust badge</h2></div><p>Keep evidence, policy and verdict separate in your API. Let users inspect why a decision passed.</p></div>
+        <div class="developer-grid">
+          <article><span>1</span><h3>Challenge from the verifier</h3><p>Create the nonce in the browser or independent verifier—not inside the workload being checked.</p></article>
+          <article><span>2</span><h3>Return evidence, not a boolean</h3><p>Include the nonce, binding inputs, raw signed evidence, endorsements, identity claims and policy result.</p></article>
+          <article><span>3</span><h3>Gate action on appraisal</h3><p>Authorize only after signature, TCB, freshness, measurement and binding checks all pass.</p></article>
+        </div>
+        <div class="code-card">
+          <div class="code-head"><span>Minimal same-origin binding check</span><code>browser.js</code></div>
+          <pre><code>import { randomNonceBytes, bytesToBase64, hexToBytes, reportDataHex } from "/verify.js";
+
+const nonce = randomNonceBytes(32);
+const response = await fetch("/api/verify", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ nonce_b64: bytesToBase64(nonce), domain: location.hostname })
+}).then(r =&gt; r.json());
+
+const browserValue = await reportDataHex(
+  location.hostname,
+  nonce,
+  hexToBytes(response.leaf_spki_sha256),
+  hexToBytes(response.receipt_pubkey_sha256)
+);
+
+if (!response.match || browserValue !== response.evidence_report_data_hex) {
+  throw new Error("attestation binding failed");
+}
+
+// Production: independently appraise response.evidence and endorsements,
+// then enforce the expected measurement/image policy before authorizing.</code></pre>
+        </div>
+      </section>
+
+      <details class="raw" id="evidence">
+        <summary>Inspect the raw verification response</summary>
+        <pre id="evidence-pre">Run live verification to populate this response.</pre>
+      </details>
+    </main>
+
+    <footer class="app"><strong>Prove-It</strong><span>An intentionally small reference workload for explainable confidential-computing verification.</span></footer>
   </div>
-
   <script type="module" src="/app.js"></script>
 </body>
 </html>

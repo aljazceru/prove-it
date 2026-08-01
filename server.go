@@ -47,6 +47,10 @@ func (a *app) routes() *http.ServeMux {
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; object-src 'none'; script-src 'self'; style-src 'self'")
+	w.Header().Set("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=(), usb=()")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	a.mux.ServeHTTP(w, r)
 }
 

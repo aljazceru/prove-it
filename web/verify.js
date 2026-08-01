@@ -3,10 +3,12 @@
 // attestation-proxy. The browser independently recomputes the SEV-SNP
 // REPORT_DATA field and checks it against (a) the server's claimed value and
 // (b) the value embedded in the hardware attestation report. If all three
-// agree, the attestation is provably live and bound to this browser session.
+// agree, the returned evidence binding is fresh for this browser session.
+// AMD signature and TCB appraisal are deliberately outside this module.
 
 export function hexToBytes(hex) {
-  hex = String(hex).toLowerCase().replace(/[^0-9a-f]/g, "");
+  hex = String(hex).trim().toLowerCase();
+  if (!/^(?:[0-9a-f]{2})*$/.test(hex)) throw new Error("expected even-length hexadecimal input");
   const out = new Uint8Array(hex.length / 2);
   for (let i = 0; i < out.length; i++) {
     out[i] = parseInt(hex.substr(i * 2, 2), 16);
@@ -80,6 +82,9 @@ export async function transcriptHash(domain, nonce, leafSpki) {
 }
 
 export async function reportDataHex(domain, nonce, leafSpki, receipt) {
+  if (nonce.length !== 32 || leafSpki.length !== 32 || receipt.length !== 32) {
+    throw new Error("nonce, leaf SPKI hash and receipt key hash must each be 32 bytes");
+  }
   const th = await transcriptHash(domain, nonce, leafSpki);
   const h = await ceV1Hash([
     rec("purpose", enc.encode("enclava-tee-report-data-v1")),

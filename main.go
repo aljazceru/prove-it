@@ -1,8 +1,8 @@
 // Command prove-it is a self-describing attestation dashboard. It runs inside
 // a confidential workload, mediates the co-located attestation-proxy, and lets
-// a browser cryptographically verify that it is talking to a live, attested
-// AMD SEV-SNP confidential VM whose attestation report is bound to the current
-// session nonce, the tenant domain, and the in-TEE TLS identity.
+// a browser verify that returned evidence is freshly bound to the session
+// nonce, requested domain, and in-TEE attestation-proxy identity. Hardware
+// signature and TCB appraisal remain a separate verifier responsibility.
 package main
 
 import (
@@ -27,8 +27,6 @@ func main() {
 		"Encrypted state volume path")
 	flag.Parse()
 
-	globalConfigDir = *configDir
-
 	app, err := newApp(*configDir, *statePath)
 	if err != nil {
 		log.Fatalf("prove-it: init failed: %v", err)
@@ -37,6 +35,7 @@ func main() {
 	srv := &http.Server{
 		Addr:              *addr,
 		Handler:           app,
+		MaxHeaderBytes:    64 << 10,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
