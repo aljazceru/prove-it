@@ -32,7 +32,7 @@ Add these constants near the other template constants in
 ```rust
 const PROVE_IT_SLUG: &str = "prove-it";
 const PROVE_IT_VERSION: &str = "0.2.0";
-const DEFAULT_PROVE_IT_IMAGE: &str = "ghcr.io/aljazceru/prove-it@sha256:bb590f549eaafc5069d528406c6a7d879f4f143b5e837dc2e701031f615ddc9d";
+const DEFAULT_PROVE_IT_IMAGE: &str = "ghcr.io/aljazceru/prove-it@sha256:538dffc2ec43f0cbf70bc31218289f105046fd54e3cc08ea2d9031f305e24ac7";
 const DEFAULT_PROVE_IT_REPOSITORY: &str = "aljazceru/prove-it";
 const DEFAULT_PROVE_IT_SIGNER_SUBJECT: &str =
     "https://github.com/aljazceru/prove-it/.github/workflows/image.yml@refs/heads/main";
