@@ -124,6 +124,15 @@
           <ol id="verify-steps" class="steps" hidden></ol>
           <div id="compare" class="compare" hidden></div>
         </div>
+        <div class="card verify-card">
+          <h3>Verify independently</h3>
+          <p class="intro-copy">The tenant page, its binding demo, and any appraiser verdict are untrusted claims. Download fresh raw evidence here, then open the independently obtained CAP HTML/WASM verifier with your own policy—or use <code>enclava verify</code> for live TLS-channel binding.</p>
+          <div class="action-row">
+            <button id="download-proof-btn" class="btn ghost">Download fresh proof bundle</button>
+            <a class="btn ghost" href="https://github.com/enclava-labs/cap/releases" rel="external noreferrer">Get the CAP verifier</a>
+            <span id="download-proof-note" class="dim" role="status" aria-live="polite"></span>
+          </div>
+        </div>
       </section>
 
       <div id="secret-wrap"></div>
