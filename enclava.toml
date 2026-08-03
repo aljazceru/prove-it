@@ -1,5 +1,5 @@
 [app]
-name = "prove-it-dev"
+name = "prove-it-independent-dev"
 port = 8080
 command = ["/usr/local/bin/prove-it"]
 
