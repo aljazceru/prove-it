@@ -72,8 +72,11 @@ func handleDishonestAppraiserClaim(w http.ResponseWriter, r *http.Request) {
 		"operator": "dishonest-demo-appraiser",
 		"verdict":  "PASS",
 		"receipt": map[string]any{
-			"key_id":           "untrusted-test-key",
-			"signature_base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+			"key_id":            "untrusted-test-key",
+			"appraised_at":      1,
+			"expires_at":        2,
+			"public_key_base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"signature_base64":  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
 		},
 		"warning": "Untrusted opinion. It cannot change an independent local verdict.",
 	})

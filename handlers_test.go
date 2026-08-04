@@ -201,7 +201,9 @@ func TestAdversarialClaimsAreExplicitlyUntrustedAndOptIn(t *testing.T) {
 	rec = httptest.NewRecorder()
 	a.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(`"verdict":"PASS"`)) ||
-		!bytes.Contains(rec.Body.Bytes(), []byte("Untrusted opinion")) {
+		!bytes.Contains(rec.Body.Bytes(), []byte("Untrusted opinion")) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"public_key_base64"`)) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"appraised_at":1`)) {
 		t.Fatalf("unexpected fake appraiser response: %d %s", rec.Code, rec.Body.String())
 	}
 
