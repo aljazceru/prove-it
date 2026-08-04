@@ -187,8 +187,18 @@ func TestAdversarialClaimsAreExplicitlyUntrustedAndOptIn(t *testing.T) {
 	}
 
 	t.Setenv("PROVE_IT_ADVERSARIAL_DEMO", "1")
-	req := httptest.NewRequest(http.MethodGet, "/api/fake-appraiser", nil)
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/confidential/proof-bundle", nil)
 	rec := httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK ||
+		rec.Header().Get("Content-Type") != "application/vnd.enclava.proof-bundle.v1" ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"verdict":"PASS"`)) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"source":"untrusted-tenant"`)) {
+		t.Fatalf("unexpected fake tenant proof response: %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/fake-appraiser", nil)
+	rec = httptest.NewRecorder()
 	a.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(`"verdict":"PASS"`)) ||
 		!bytes.Contains(rec.Body.Bytes(), []byte("Untrusted opinion")) {
