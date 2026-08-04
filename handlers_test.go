@@ -204,6 +204,14 @@ func TestAdversarialClaimsAreExplicitlyUntrustedAndOptIn(t *testing.T) {
 		!bytes.Contains(rec.Body.Bytes(), []byte("Untrusted opinion")) {
 		t.Fatalf("unexpected fake appraiser response: %d %s", rec.Code, rec.Body.String())
 	}
+
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	rec = httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(">Verified</h2>")) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte("This green page is untrusted")) {
+		t.Fatalf("unexpected adversarial page: %d %s", rec.Code, rec.Body.String())
+	}
 }
 
 func TestVerify_MissingParams(t *testing.T) {

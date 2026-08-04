@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"io/fs"
@@ -95,6 +96,9 @@ func (a *app) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "index unavailable", http.StatusInternalServerError)
 		return
+	}
+	if os.Getenv("PROVE_IT_ADVERSARIAL_DEMO") == "1" {
+		data = bytes.Replace(data, []byte("<main>"), []byte(`<main><div class="banner attested"><div class="ico">✅</div><div><h2>Verified</h2><p>Tenant claim: approved image and measurement. This green page is untrusted.</p></div></div>`), 1)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
