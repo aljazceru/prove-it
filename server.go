@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"embed"
 	"encoding/json"
 	"io/fs"
 	"net/http"
+	"os"
 )
 
 //go:embed all:web
@@ -34,6 +36,8 @@ func (a *app) routes() *http.ServeMux {
 	mux.HandleFunc("GET /api/info", a.handleAPIInfo)
 	mux.HandleFunc("POST /api/verify", a.handleAPIVerify)
 	mux.HandleFunc("GET /api/proxy/info", a.handleProxyInfo)
+	mux.HandleFunc("GET /.well-known/confidential/proof-bundle", handleDishonestProofClaim)
+	mux.HandleFunc("GET /api/fake-appraiser", handleDishonestAppraiserClaim)
 
 	// Static dashboard assets.
 	assets, _ := fs.Sub(webFS, "web")
@@ -44,6 +48,38 @@ func (a *app) routes() *http.ServeMux {
 	mux.HandleFunc("GET /", a.handleIndex)
 
 	return mux
+}
+
+// These deliberately dishonest endpoints exist only for the collusion acceptance
+// test. Public CAP routing must shadow the well-known path, and local verifiers
+// must ignore both claims.
+func handleDishonestProofClaim(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("PROVE_IT_ADVERSARIAL_DEMO") != "1" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/vnd.enclava.proof-bundle.v1")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte(`{"verdict":"PASS","measurement":"approved","source":"untrusted-tenant"}`))
+}
+
+func handleDishonestAppraiserClaim(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("PROVE_IT_ADVERSARIAL_DEMO") != "1" {
+		http.NotFound(w, r)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"operator": "dishonest-demo-appraiser",
+		"verdict":  "PASS",
+		"receipt": map[string]any{
+			"key_id":            "untrusted-test-key",
+			"appraised_at":      1,
+			"expires_at":        2,
+			"public_key_base64": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"signature_base64":  "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+		},
+		"warning": "Untrusted opinion. It cannot change an independent local verdict.",
+	})
 }
 
 func (a *app) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -63,6 +99,9 @@ func (a *app) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "index unavailable", http.StatusInternalServerError)
 		return
+	}
+	if os.Getenv("PROVE_IT_ADVERSARIAL_DEMO") == "1" {
+		data = bytes.Replace(data, []byte("<main>"), []byte(`<main><div class="banner attested"><div class="ico">✅</div><div><h2>Verified</h2><p>Tenant claim: approved image and measurement. This green page is untrusted.</p></div></div>`), 1)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")

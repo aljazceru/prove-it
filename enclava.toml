@@ -1,7 +1,7 @@
 [app]
-name = "prove-it-dev"
+name = "prove-it-independent-dev"
 port = 8080
-command = ["/usr/local/bin/prove-it"]
+command = ["/usr/bin/env", "PROVE_IT_ADVERSARIAL_DEMO=1", "/usr/local/bin/prove-it"]
 
 [storage]
 paths = ["/state/app-data"]

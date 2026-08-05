@@ -80,7 +80,7 @@ jobs:
   publish:
     name: Publish signed prove-it image
     needs: validate
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -138,7 +138,19 @@ jobs:
         run: cosign sign --yes "${IMAGE}@${DIGEST}"
 
       - name: Verify signed digest
+        if: github.event_name != 'workflow_dispatch'
         run: scripts/verify-image-ref.sh --cosign dist/prove-it-image.txt
+
+      - name: Verify manually dispatched candidate digest
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          IMAGE: ${{ env.PROVE_IT_IMAGE_REPOSITORY }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SIGNER_SUBJECT: https://github.com/${{ github.workflow_ref }}
+        run: |
+          cosign verify "${IMAGE}@${DIGEST}" \
+            --certificate-identity "${SIGNER_SUBJECT}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
       - name: Upload image digest artifact
         uses: actions/upload-artifact@v4

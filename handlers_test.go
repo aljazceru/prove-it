@@ -172,6 +172,50 @@ func TestVerify_MismatchHidesSecret(t *testing.T) {
 	}
 }
 
+func TestAdversarialClaimsAreExplicitlyUntrustedAndOptIn(t *testing.T) {
+	a := newTestApp(t, "http://127.0.0.1:1")
+	for _, path := range []string{
+		"/.well-known/confidential/proof-bundle",
+		"/api/fake-appraiser",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rec := httptest.NewRecorder()
+		a.ServeHTTP(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("%s status = %d, want 404", path, rec.Code)
+		}
+	}
+
+	t.Setenv("PROVE_IT_ADVERSARIAL_DEMO", "1")
+	req := httptest.NewRequest(http.MethodGet, "/.well-known/confidential/proof-bundle", nil)
+	rec := httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK ||
+		rec.Header().Get("Content-Type") != "application/vnd.enclava.proof-bundle.v1" ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"verdict":"PASS"`)) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"source":"untrusted-tenant"`)) {
+		t.Fatalf("unexpected fake tenant proof response: %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/fake-appraiser", nil)
+	rec = httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(`"verdict":"PASS"`)) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte("Untrusted opinion")) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"public_key_base64"`)) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte(`"appraised_at":1`)) {
+		t.Fatalf("unexpected fake appraiser response: %d %s", rec.Code, rec.Body.String())
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/", nil)
+	rec = httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK || !bytes.Contains(rec.Body.Bytes(), []byte(">Verified</h2>")) ||
+		!bytes.Contains(rec.Body.Bytes(), []byte("This green page is untrusted")) {
+		t.Fatalf("unexpected adversarial page: %d %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestVerify_MissingParams(t *testing.T) {
 	proxy := fakeProxy(t, testReport)
 	defer proxy.Close()

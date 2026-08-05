@@ -199,6 +199,38 @@ function renderSecret(data) {
   }
 }
 
+async function downloadProofBundle() {
+  const button = el("download-proof-btn");
+  const note = el("download-proof-note");
+  button.disabled = true;
+  note.textContent = "Fetching fresh platform evidence…";
+  try {
+    const nonce = randomNonceBytes(32);
+    const nonceB64url = bytesToBase64(nonce)
+      .replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+    const response = await fetch(`/.well-known/confidential/proof-bundle?nonce=${nonceB64url}`, {
+      headers: { accept: "application/vnd.enclava.proof-bundle.v1" },
+      cache: "no-store",
+      credentials: "omit",
+    });
+    if (!response.ok || response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/vnd.enclava.proof-bundle.v1") {
+      throw new Error(`proof endpoint returned HTTP ${response.status}`);
+    }
+    const bytes = await response.arrayBuffer();
+    if (bytes.byteLength > 1048576) throw new Error("proof bundle exceeds the v1 limit");
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.enclava.proof-bundle.v1" }));
+    link.download = `prove-it-proof-${Date.now()}.ce`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    note.textContent = "Raw platform evidence downloaded; choose policy independently.";
+  } catch (error) {
+    note.textContent = `Could not download proof: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 // ----- run live verification -------------------------------------------------
 async function runVerify() {
   const btn = el("verify-btn");
@@ -359,6 +391,7 @@ async function loadDemoFixture() {
 // ----- wire up ---------------------------------------------------------------
 el("verify-btn").addEventListener("click", runVerify);
 el("selftest-btn").addEventListener("click", runSelfTest);
+el("download-proof-btn").addEventListener("click", downloadProofBundle);
 
 const params = new URLSearchParams(location.search);
 if (params.get("demo") === "1") {
