@@ -213,7 +213,7 @@ async function downloadProofBundle() {
       cache: "no-store",
       credentials: "omit",
     });
-    if (!response.ok || response.headers.get("content-type") !== "application/vnd.enclava.proof-bundle.v1") {
+    if (!response.ok || response.headers.get("content-type")?.split(";", 1)[0].trim().toLowerCase() !== "application/vnd.enclava.proof-bundle.v1") {
       throw new Error(`proof endpoint returned HTTP ${response.status}`);
     }
     const bytes = await response.arrayBuffer();
